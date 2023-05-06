@@ -4,13 +4,13 @@
 #####################################################################################
 
 
-https://geofabio.com/2023/01/26/modelo-random-forest-para-estimacion-del-nicho-ecologico-de-una-especie-forestal/
+# https://geofabio.com/2023/01/26/modelo-random-forest-para-estimacion-del-nicho-ecologico-de-una-especie-forestal/
 # Limpiar la consola y el espacio de trabajo --------------------------------
 g <- gc(reset = T)
 rm(list = ls())
 options(scipen = 999, warn = -1)
 
-
+#install.packages('pacman')
 # Cargar paquetes ----------------------------------------------------------
 require(pacman)
 pacman::p_load(rnaturalearthdata, rnaturalearth, cptcity, SSDM, ggspatial, raster, terra, sf, fs, glue, tidyverse, rgbif, geodata)
@@ -40,15 +40,20 @@ wrld <- ne_countries(returnclass = 'sf', scale = 50)
 # Obtener los límites de Colombia
 col <- geodata::gadm(country = 'COL', level = 1, path = 'tmpr')
 
+# Visualizar los datos ------------------------------------------------------
+plot(st_geometry(wrld))
+plot(col)
+points(occr$decimalLongitude, occr$decimalLatitude, pch = 16, col = 'red')
+
 # Obtener las variables ambientales en formato raster
-tmin <- raster("D:/Spatial_DB/Curso/raster/geotif_500/Tmin.tif")
-tmax <- raster("D:/Spatial_DB/Curso/raster/geotif_500/Tmax.tif")
-elev <- raster("D:/Spatial_DB/Curso/raster/geotif_500/elevation.tif")
-clc <- raster("D:/Spatial_DB/Curso/raster/geotif_500/clc.tif")
-fpf <- raster("D:/Spatial_DB/Curso/raster/geotif_500/Forest_prox_people.tif")
-prec <- raster("D:/Spatial_DB/Curso/raster/geotif_500/precipitation.tif")
-tpi <- raster("D:/Spatial_DB/Curso/raster/geotif_500/tpi.tif")
-pop <- raster("D:/Spatial_DB/Curso/raster/geotif_500/population.tif")
+tmin <- raster("D:/Spatial_DB/Curso/raster/modelo/tmin.tif")
+tmax <- raster("D:/Spatial_DB/Curso/raster/modelo/tmax.tif")
+elev <- raster("D:/Spatial_DB/Curso/raster/modelo/elev.tif")
+clc <- raster("D:/Spatial_DB/Curso/raster/modelo/clc.tif")
+fpf <- raster("D:/Spatial_DB/Curso/raster/modelo/fpf.tif")
+prec <- raster("D:/Spatial_DB/Curso/raster/modelo/prec.tif")
+tpi <- raster("D:/Spatial_DB/Curso/raster/modelo/tpi.tif")
+pop <- raster("D:/Spatial_DB/Curso/raster/modelo/pop.tif")
 
 # Crear un objeto RasterStack con las variables ambientales
 rs <- stack(tmin, tmax, elev, clc, fpf, prec, tpi, pop)
@@ -56,18 +61,13 @@ rs <- stack(tmin, tmax, elev, clc, fpf, prec, tpi, pop)
 # Convertir el objeto RasterStack a un objeto SpatRaster
 bioc <- rast(rs)
 
-# Visualizar los datos ------------------------------------------------------
-plot(st_geometry(wrld))
-plot(col)
-points(occr$decimalLongitude, occr$decimalLatitude, pch = 16, col = 'red')
-
 # Extraer los valores de las variables ambientales en los puntos de ocurrencia de la especie
 occr <- dplyr::select(occr, x = decimalLongitude, y = decimalLatitude)
 vles <- terra::extract(bioc, occr[,c('x', 'y')])
 occr <- cbind(occr[,c('x', 'y')], vles[,-1])
 occr <- as_tibble(occr)
 occr <- mutate(occr, pb = 1)
-
+head(occr)
 
 # Generar areas de No presencia (Background)
 cell <- terra::extract(bioc[[1]], occr[,1:2], cells = T)$cell
@@ -81,17 +81,23 @@ back <- mutate(back, pb = 0) # Agregar columna pb
 back <- cbind(back, terra::extract(bioc, back[,c(1, 2)])[,-1]) # Extraer variables de la abioticas en el background
 back <- as_tibble(back) # Convertir a dataframe
 
-# Unir los datos de presencia y ausencia
+# Unir los datos de presencia y pseudo-ausencias
 tble <- rbind(occr, back)
+head(tble)
 
 # Random forest 
   
-# Convertir bioclimática en raster stack
+# Convertir ambientales en raster stack
 bioc <- stack(bioc)
 tble <- as.data.frame(tble) # Convertir a dataframe
 
 # Modelo Random Forest
-sdrf <- modelling(algorithm = 'RF', Env = bioc, Occurrences = tble, Pcol = 'pb', Xcol = 'x', cv.parm = c(0.75, 0.25), Ycol = 'y', metric = 'TSS', select.metric = 'AUC')
+sdrf <- modelling(algorithm = 'RF', 
+                  Env = bioc, 
+                  Occurrences = tble, 
+                  Pcol = 'pb', 
+                  Xcol = 'x', Ycol = 'y',
+                  cv.parm = c(0.75, 0.25), metric = 'ROC', select.metric = 'AUC')
 
 #  Gráfico de proyección
 plot(sdrf@projection)
@@ -157,4 +163,4 @@ gmap <- ggplot() +
 #ggsave(plot = gmap, filename = 'png/mapa_rf.png', units = 'in', width = 9, height = 7, dpi = 300)
 
 # Guardar el raster
-writeRaster(rstr,"D:/Spatial_DB/Curso/output/Modelo_variablesRF.tif")
+writeRaster(rstr,"D:/Spatial_DB/Curso/output/Modelo_variablesRF2.tif")
