@@ -1,11 +1,13 @@
 #####################################################################################
 # Código para preparar los ráster ambientales para realizar la distribución
 # de especies con Maxent
+# Modificado de: https://www.azavea.com/blog/2018/10/09/preparing-data-for-maxent-species-distribution-modeling-using-r/
 #####################################################################################
 
 
 # Cargar libreria
 library(raster)
+
 
 #Configurar el parámetro de extensión para utilizarlo en todo el script
 ext <- extent(-82, -66, -5.5, 12)
@@ -20,7 +22,18 @@ prec <- raster("D:/Spatial_DB/Curso/raster/geotif_500/precipitation.tif")
 tpi <- raster("D:/Spatial_DB/Curso/raster/geotif_500/tpi.tif")
 pop <- raster("D:/Spatial_DB/Curso/raster/geotif_500/population.tif")
 
-# Cortarlas por una misma extensión
+# Remuestrear (Útil cuando las variables tiene diferentes resoluciones espaciales)
+# Utilizamos una variable como base en nuestro caso elevacion
+base <- elev
+tmin <- resample(tmin,base)
+tmax <- resample(tmax,base)
+clc <- resample(tmin,base)
+fpf <- resample(clc,base)
+prec <- resample(prec,base)
+tpi <- resample(tpi,base)
+pop <- resample(pop,base)
+
+# Cortar los raster por una misma extensión y asignar NA
 tmin_tend <- extend(tmin, ext, value=NA)
 NAvalue(tmin_tend) <- -9999
 tmax_tend <- extend(tmax, ext, value=NA)
