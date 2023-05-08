@@ -7,7 +7,7 @@
 # Cargar libreria
 library(raster)
 
-#set up extent parameter for use throughout script
+#Configurar el parámetro de extensión para utilizarlo en todo el script
 ext <- extent(-82, -66, -5.5, 12)
 
 # Obtener las variables ambientales en formato raster
@@ -52,7 +52,7 @@ writeRaster(tpi_tend, filename="tpi.asc", format="ascii", overwrite=TRUE)
 writeRaster(pop_tend, filename="pop.asc", format="ascii", overwrite=TRUE)
 
 
-# Guardar los raster ASCII
+# Guardar los raster GEOTIFF
 setwd("D:/Spatial_DB/Curso/raster/modelo")
 writeRaster(tmin_tend, filename="tmin.tif", format="GTiff", overwrite=TRUE)
 writeRaster(tmax_tend, filename="tmax.tif", format="GTiff", overwrite=TRUE)
