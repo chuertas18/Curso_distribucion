@@ -1,4 +1,4 @@
-# Curso_distribucion
+# Curso modelos de distribución de especies Random Forest y Máxima entropía
  Modelos del curso de distribución de especies
   
  Proceso general
